@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # AgriSmart Backend API
 
 A scalable FastAPI backend for farm management system with OTP-based authentication, expense tracking, yield management, and profit/loss reporting.
@@ -48,14 +47,29 @@ A scalable FastAPI backend for farm management system with OTP-based authenticat
      ```
 
 5. **Set up database**
+   
+   **Option 1: Using Alembic Migrations (Recommended for Production)**
    ```bash
    # Create database in PostgreSQL
    createdb agris_db
    
-   # Run migrations
+   # Generate initial migration
    alembic revision --autogenerate -m "init tables"
+   
+   # Apply migrations
    alembic upgrade head
    ```
+   
+   **Option 2: Using Setup Script (Development Only)**
+   ```bash
+   # Create database in PostgreSQL
+   createdb agris_db
+   
+   # Run setup script (only when needed, not on every server start)
+   python setup_db.py
+   ```
+   
+   ⚠️ **Important**: Database tables are NOT created automatically on server start. You must run migrations or the setup script manually.
 
 6. **Run the server**
    ```bash
@@ -121,18 +135,29 @@ All subsequent requests require Bearer token in Authorization header.
 
 ## 🔧 Development
 
-### Running Migrations
+### Database Management
 
-```bash
-# Create new migration
-alembic revision --autogenerate -m "description"
+**Important**: The database tables are NOT created automatically when the server starts. You must create them manually using one of these methods:
 
-# Apply migrations
-alembic upgrade head
+1. **Using Alembic (Recommended)**
+   ```bash
+   # Create new migration
+   alembic revision --autogenerate -m "description"
+   
+   # Apply migrations
+   alembic upgrade head
+   
+   # Rollback migration
+   alembic downgrade -1
+   ```
 
-# Rollback migration
-alembic downgrade -1
-```
+2. **Using Setup Script (Development Only)**
+   ```bash
+   # Run only when you need to create tables manually
+   python setup_db.py
+   ```
+
+**Note**: The `setup_db.py` script should only be run when explicitly needed. For production, always use Alembic migrations.
 
 ### Project Structure
 
@@ -159,8 +184,3 @@ For development without Twilio, the OTP will be printed to console. Update `.env
 ## 📝 License
 
 MIT License
-
-
-=======
-# FarmWise
->>>>>>> e6da717669f69326d19c3b50f03ac17f6c953837
