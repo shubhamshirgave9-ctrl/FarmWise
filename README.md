@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # AgriSmart Backend API
 
 A scalable FastAPI backend for farm management system with OTP-based authentication, expense tracking, yield management, and profit/loss reporting.
@@ -160,3 +161,6 @@ For development without Twilio, the OTP will be printed to console. Update `.env
 MIT License
 
 
+=======
+# FarmWise
+>>>>>>> e6da717669f69326d19c3b50f03ac17f6c953837
