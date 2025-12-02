@@ -10,36 +10,55 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { ArrowLeft } from "lucide-react"
+import { apiClient } from "@/lib/api-client"
+import { useAuthGuard } from "@/hooks/use-auth-guard"
 
 export default function YieldEntryPage() {
   const router = useRouter()
   const params = useParams()
-  const farmId = params.id
+  useAuthGuard()
+  const farmId = Array.isArray(params?.id) ? params?.id[0] : (params?.id as string | undefined)
 
   const [formData, setFormData] = useState({
+    cropName: "",
     quantity: "",
     unit: "kg",
     rate: "",
     soldPrice: "",
     date: new Date().toISOString().split("T")[0],
+    notes: "",
   })
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
+    setError(null)
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/farms/${farmId}/yield`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+      if (!farmId) throw new Error("Missing farm id.")
+      const quantityValue = Number.parseFloat(formData.quantity)
+      const soldPriceValue = Number.parseFloat(formData.soldPrice)
+      const rateValue = Number.parseFloat(formData.rate)
+
+      if (Number.isNaN(quantityValue) || Number.isNaN(soldPriceValue) || Number.isNaN(rateValue)) {
+        throw new Error("Please provide valid numeric values for quantity, rate, and total price.")
+      }
+
+      await apiClient.post(`/farms/${farmId}/yield`, {
+        cropName: formData.cropName || undefined,
+        quantity: quantityValue,
+        unit: formData.unit,
+        rate: rateValue,
+        soldPrice: soldPriceValue,
+        date: formData.date,
+        notes: formData.notes || undefined,
       })
 
-      if (response.ok) {
-        router.push(`/farm/${farmId}`)
-      }
+      router.push(`/farm/${farmId}`)
     } catch (error) {
       console.error("Error adding yield:", error)
+      setError(error instanceof Error ? error.message : "Failed to add yield.")
     } finally {
       setLoading(false)
     }
@@ -63,6 +82,17 @@ export default function YieldEntryPage() {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <Label htmlFor="crop">Crop Name</Label>
+                <Input
+                  id="crop"
+                  placeholder="e.g., Corn"
+                  value={formData.cropName}
+                  onChange={(e) => setFormData({ ...formData, cropName: e.target.value })}
+                  required
+                />
+              </div>
+
               <div>
                 <Label htmlFor="quantity">Quantity</Label>
                 <Input
@@ -128,6 +158,18 @@ export default function YieldEntryPage() {
                   required
                 />
               </div>
+
+              <div>
+                <Label htmlFor="notes">Notes (optional)</Label>
+                <Input
+                  id="notes"
+                  placeholder="Add any remarks"
+                  value={formData.notes}
+                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                />
+              </div>
+
+              {error && <p className="text-sm text-red-600 bg-red-100/60 border border-red-200 px-3 py-2 rounded">{error}</p>}
 
               {totalSoldPrice > 0 && (
                 <Card className="bg-green-50 border-green-200">

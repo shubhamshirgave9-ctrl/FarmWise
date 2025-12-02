@@ -6,11 +6,14 @@ import { Navigation } from "@/components/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ArrowLeft, Download, FileJson, FileText } from "lucide-react"
+import { apiClient } from "@/lib/api-client"
+import { useAuthGuard } from "@/hooks/use-auth-guard"
 
 export default function ExpensesReportPage() {
   const router = useRouter()
   const params = useParams()
-  const farmId = params.id
+  useAuthGuard()
+  const farmId = Array.isArray(params?.id) ? params?.id[0] : (params?.id as string | undefined)
 
   const [expensesData, setExpensesData] = useState({
     farmName: "Main Farm",
@@ -21,13 +24,25 @@ export default function ExpensesReportPage() {
   useEffect(() => {
     const fetchExpenses = async () => {
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/farms/${farmId}/expenses`)
-        const data = await response.json()
-        const totalExpenses = data.reduce((sum: number, exp: any) => sum + exp.amount, 0)
+        if (!farmId) return
+        const [farm, data] = await Promise.all([
+          apiClient.get<{ name: string; size: string }>(`/farms/${farmId}`),
+          apiClient.get<Array<{ id: string; category: string; amount: number; date: string; description?: string | null }>>(
+            `/farms/${farmId}/expenses`,
+          ),
+        ])
+        const totalExpenses = (data ?? []).reduce((sum, exp) => sum + Number(exp.amount || 0), 0)
         setExpensesData({
-          farmName: "Main Farm",
+          farmName: farm?.name ?? "Farm Expenses",
           totalExpenses,
-          expenses: data,
+          expenses:
+            data?.map((expense) => ({
+              id: Number.isNaN(Number(expense.id)) ? Date.now() : Number(expense.id),
+              category: expense.category,
+              amount: Number(expense.amount || 0),
+              date: expense.date,
+              description: expense.description || "",
+            })) ?? [],
         })
       } catch (error) {
         console.error("Error fetching expenses:", error)
@@ -63,20 +78,16 @@ export default function ExpensesReportPage() {
 
   const downloadPDF = async () => {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/farms/${farmId}/expenses/report/pdf`, {
-        method: "GET",
-      })
-      if (response.ok) {
-        const blob = await response.blob()
-        const url = window.URL.createObjectURL(blob)
-        const a = document.createElement("a")
-        a.href = url
-        a.download = `expenses-report-${farmId}.pdf`
-        a.click()
-        window.URL.revokeObjectURL(url)
-      }
+      const blob = await apiClient.getBlob(`/farms/${farmId}/expenses/report/pdf`)
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = url
+      a.download = `expenses-report-${farmId}.pdf`
+      a.click()
+      window.URL.revokeObjectURL(url)
     } catch (error) {
       console.error("Error downloading PDF:", error)
+      alert("Unable to download PDF right now.")
     }
   }
 

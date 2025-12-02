@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, Field
 from typing import Optional
 from uuid import UUID
 
@@ -6,8 +6,20 @@ from uuid import UUID
 class RegisterRequest(BaseModel):
     name: str
     phone: str
-    email: Optional[EmailStr] = None
-    language: str = "en"
+    email: Optional[str] = None
+    language: Optional[str] = Field(default="en")
+
+
+class UserResponse(BaseModel):
+    id: UUID
+    name: str
+    phone: str
+    email: Optional[str] = None
+    language: str
+    is_active: bool
+
+    class Config:
+        from_attributes = True
 
 
 class RegisterResponse(BaseModel):
@@ -30,17 +42,6 @@ class VerifyOTPRequest(BaseModel):
     otp: str
 
 
-class UserResponse(BaseModel):
-    id: UUID
-    name: str
-    phone: str
-    email: Optional[str] = None
-    language: str
-
-    class Config:
-        from_attributes = True
-
-
 class VerifyOTPResponse(BaseModel):
     status: str
     user: UserResponse
@@ -48,3 +49,10 @@ class VerifyOTPResponse(BaseModel):
     refresh_token: str
 
 
+class RefreshTokenRequest(BaseModel):
+    refresh_token: str
+
+
+class RefreshTokenResponse(BaseModel):
+    access_token: str
+    refresh_token: str

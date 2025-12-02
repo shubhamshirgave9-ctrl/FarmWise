@@ -7,16 +7,18 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardDescription, CardTitle } from "@/components/ui/card"
 import { Plus, Settings, Leaf, Info } from "lucide-react"
 import { apiClient } from "@/lib/api-client"
+import { useAuthGuard } from "@/hooks/use-auth-guard"
 
 interface Farm {
-  id: string | number
+  id: string
   name: string
-  type: string
+  type?: string | null
   size: string
 }
 
 export default function HomePage() {
   const router = useRouter()
+  useAuthGuard()
   const [farms, setFarms] = useState<Farm[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -24,8 +26,17 @@ export default function HomePage() {
   useEffect(() => {
     const fetchFarms = async () => {
       try {
-        const data = await apiClient.get("/farms")
-        setFarms(data)
+        const data = await apiClient.get<
+          Array<{ id: string; name: string; type?: string | null; size: string }>
+        >("/farms")
+        setFarms(
+          (data ?? []).map((farm) => ({
+            id: farm.id,
+            name: farm.name,
+            type: farm.type,
+            size: farm.size,
+          })),
+        )
         setError(null)
       } catch (err) {
         console.error("[v0] Error fetching farms:", err)
@@ -117,7 +128,9 @@ export default function HomePage() {
                       </div>
                       <div>
                         <CardTitle className="text-lg">{farm.name}</CardTitle>
-                        <CardDescription className="text-xs">{farm.type}</CardDescription>
+                        <CardDescription className="text-xs">
+                          {farm.type ? farm.type : "General farm"}
+                        </CardDescription>
                       </div>
                     </div>
                   </div>

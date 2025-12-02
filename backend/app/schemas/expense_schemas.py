@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from typing import Optional
 from uuid import UUID
 from datetime import date, datetime
@@ -27,3 +27,19 @@ class ExpenseResponse(BaseModel):
         from_attributes = True
 
 
+class FarmExpenseCreate(BaseModel):
+    amount: float
+    date: date
+    category: str
+    description: Optional[str] = None
+    crop: Optional[str] = None
+
+
+class FarmExpenseItem(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    category: str
+    amount: float
+    date: date
+    description: Optional[str] = None

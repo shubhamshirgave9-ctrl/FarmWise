@@ -1,38 +1,87 @@
-// API client for backend communication
-// Replace BASE_URL with your Python backend URL
+import { API_BASE_URL } from "@/lib/config"
+import { authStorage, refreshAccessToken } from "@/lib/auth-client"
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
+type RequestOptions = {
+  body?: any
+  headers?: Record<string, string>
+  auth?: boolean
+  expectBlob?: boolean
+}
+
+async function request<T = unknown>(
+  endpoint: string,
+  method: "GET" | "POST" | "PUT" | "DELETE",
+  options: RequestOptions = {},
+  retry = true,
+): Promise<T> {
+  const { body, headers = {}, auth = true, expectBlob = false } = options
+  const isBrowser = typeof window !== "undefined"
+  const requestHeaders: Record<string, string> = {
+    ...(body ? { "Content-Type": "application/json" } : {}),
+    ...headers,
+  }
+
+  if (auth && isBrowser) {
+    const accessToken = authStorage.getAccessToken()
+    if (accessToken) {
+      requestHeaders.Authorization = `Bearer ${accessToken}`
+    }
+  }
+
+  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    method,
+    headers: requestHeaders,
+    body: body ? JSON.stringify(body) : undefined,
+  })
+
+  if (response.status === 401 && auth && retry) {
+    const newToken = await refreshAccessToken()
+    if (newToken) {
+      return request(endpoint, method, options, false)
+    }
+    throw new Error("Unauthorized")
+  }
+
+  if (!response.ok) {
+    const errorText = await response.text().catch(() => "")
+    throw new Error(errorText || `API error: ${response.status}`)
+  }
+
+  if (expectBlob) {
+    return (await response.blob()) as T
+  }
+
+  if (response.status === 204) {
+    return null as T
+  }
+
+  const data = (await response.json().catch(() => null)) as T
+  return data
+}
 
 export const apiClient = {
-  async get(endpoint: string) {
-    const res = await fetch(`${BASE_URL}${endpoint}`)
-    if (!res.ok) throw new Error(`API error: ${res.status}`)
-    return res.json()
+  get<T = unknown>(endpoint: string, options?: RequestOptions) {
+    return request<T>(endpoint, "GET", options)
   },
-
-  async post(endpoint: string, data: any) {
-    const res = await fetch(`${BASE_URL}${endpoint}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
-    })
-    if (!res.ok) throw new Error(`API error: ${res.status}`)
-    return res.json()
+  getBlob(endpoint: string, options?: RequestOptions) {
+    return request<Blob>(endpoint, "GET", { ...(options || {}), expectBlob: true })
   },
-
-  async put(endpoint: string, data: any) {
-    const res = await fetch(`${BASE_URL}${endpoint}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
-    })
-    if (!res.ok) throw new Error(`API error: ${res.status}`)
-    return res.json()
+  post<T = unknown>(endpoint: string, body?: any, options?: RequestOptions) {
+    return request<T>(endpoint, "POST", { ...(options || {}), body })
   },
+  put<T = unknown>(endpoint: string, body?: any, options?: RequestOptions) {
+    return request<T>(endpoint, "PUT", { ...(options || {}), body })
+  },
+  delete<T = unknown>(endpoint: string, options?: RequestOptions) {
+    return request<T>(endpoint, "DELETE", options)
+  },
+}
 
-  async delete(endpoint: string) {
-    const res = await fetch(`${BASE_URL}${endpoint}`, { method: "DELETE" })
-    if (!res.ok) throw new Error(`API error: ${res.status}`)
-    return res.json()
+export const unauthenticatedClient = {
+  post<T = unknown>(endpoint: string, body?: any) {
+    return request<T>(endpoint, "POST", { body, auth: false })
+  },
+  get<T = unknown>(endpoint: string) {
+    return request<T>(endpoint, "GET", { auth: false })
   },
 }

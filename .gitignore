@@ -1,0 +1,15 @@
+node_modules
+.env
+.env.*
+.venv/
+.trae/
+__pycache__/
+*.pyc
+.pytest_cache/
+.vscode/
+.idea/
+agris.db
+*.db
+*.pkl
+Frontend/.next/
+Frontend/out/

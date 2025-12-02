@@ -1,16 +1,16 @@
 from sqlalchemy import Column, String, Numeric, Date, DateTime, ForeignKey
-from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 import uuid
 from app.database import Base
+from app.utils.db_types import GUID
 
 
 class Yield(Base):
     __tablename__ = "yields"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    farm_id = Column(UUID(as_uuid=True), ForeignKey("farms.id"), nullable=False)
+    id = Column(GUID(), primary_key=True, default=uuid.uuid4)
+    farm_id = Column(GUID(), ForeignKey("farms.id"), nullable=False)
     crop_name = Column(String, nullable=False)
     date = Column(Date, nullable=False)
     quantity_kg = Column(Numeric(10, 2), nullable=False)

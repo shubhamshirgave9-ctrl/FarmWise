@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routes import auth, farms, expenses, yields, reports, charts, dashboard
+from app.routes import auth, farms, expenses, yields, reports, charts, dashboard, ai_expense, prediction, chatbot
 
 app = FastAPI(
     title="AgriSmart Backend API",
@@ -25,6 +25,9 @@ app.include_router(yields.router)
 app.include_router(reports.router)
 app.include_router(charts.router)
 app.include_router(dashboard.router)
+app.include_router(ai_expense.router)
+app.include_router(prediction.router)
+app.include_router(chatbot.router)
 
 
 @app.get("/")

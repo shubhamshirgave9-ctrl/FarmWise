@@ -11,8 +11,7 @@ Note: This should NOT run automatically on server start.
 import os
 import sys
 
-# Add parent directory to path
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from app.database import engine, Base
 from app.models import User, Farm, Expense, Yield
@@ -29,5 +28,3 @@ def init_db():
 
 if __name__ == "__main__":
     init_db()
-
-

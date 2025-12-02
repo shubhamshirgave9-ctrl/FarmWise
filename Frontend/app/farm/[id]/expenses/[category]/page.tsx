@@ -11,12 +11,14 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { ArrowLeft } from "lucide-react"
 import { apiClient } from "@/lib/api-client"
+import { useAuthGuard } from "@/hooks/use-auth-guard"
 
 export default function AddExpensePage() {
   const router = useRouter()
   const params = useParams()
-  const farmId = params.id
-  const category = params.category
+  useAuthGuard()
+  const farmId = Array.isArray(params?.id) ? params?.id[0] : (params?.id as string | undefined)
+  const category = Array.isArray(params?.category) ? params?.category[0] : (params?.category as string | undefined)
 
   const [formData, setFormData] = useState({
     amount: "",
@@ -32,10 +34,18 @@ export default function AddExpensePage() {
     setError(null)
 
     try {
+      if (!farmId || !category) {
+        throw new Error("Missing farm information.")
+      }
+      const amountValue = Number.parseFloat(formData.amount)
+      if (Number.isNaN(amountValue)) {
+        throw new Error("Please enter a valid amount.")
+      }
       await apiClient.post(`/farms/${farmId}/expenses`, {
-        ...formData,
-        category: category,
-        amount: Number.parseFloat(formData.amount),
+        amount: amountValue,
+        date: formData.date,
+        category,
+        description: formData.description || undefined,
       })
       router.push(`/farm/${farmId}/expenses`)
     } catch (err) {

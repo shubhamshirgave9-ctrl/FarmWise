@@ -1,7 +1,10 @@
 import { CropAnalysis } from "@/components/crop-analysis"
 import { Navigation } from "@/components/navigation"
+import { useAuthGuard } from "@/hooks/use-auth-guard"
 
 export default function AnalysisPage() {
+  useAuthGuard()
+
   return (
     <div className="min-h-screen bg-background">
       <Navigation />

@@ -15,7 +15,7 @@ A scalable FastAPI backend for farm management system with OTP-based authenticat
 ## 📋 Prerequisites
 
 - Python 3.8+
-- PostgreSQL database
+- SQLite (bundled with Python) or PostgreSQL if you prefer an external DB
 - Twilio account (for SMS OTP)
 
 ## 🛠️ Installation
@@ -39,37 +39,38 @@ A scalable FastAPI backend for farm management system with OTP-based authenticat
 4. **Set up environment variables**
    - Copy `.env` file and update with your credentials:
      ```env
-     DATABASE_URL=postgresql+psycopg2://postgres:password@localhost:5432/agris_db
+     DATABASE_URL=sqlite:///./agris.db           # Default: SQLite file in project root
      JWT_SECRET_KEY=your-secret-key-here
      TWILIO_ACCOUNT_SID=your_twilio_sid
      TWILIO_AUTH_TOKEN=your_twilio_token
      TWILIO_PHONE_NUMBER=+1234567890
+     
+     # AI expense extraction (OpenRouter)
+     OPENROUTER_API_KEY=your-openrouter-api-key
+     OPENROUTER_HTTP_REFERER=https://your-site.example   # optional
+     OPENROUTER_TITLE=FarmWise                           # optional
+     OPENROUTER_APP_NAME=AgriSmart Chatbot               # optional name shown in OpenRouter
+
+     # Plant identification for chatbot (optional but required for photo uploads)
+     PLANTID_API_KEY=your-plantid-api-key
+     CHATBOT_IMAGE_UPLOAD_DIR=uploads/images
      ```
 
 5. **Set up database**
    
-   **Option 1: Using Alembic Migrations (Recommended for Production)**
+   The default SQLite database file is created automatically when migrations run.
+   
+   **Option 1: Using Alembic Migrations (Recommended)**
    ```bash
-   # Create database in PostgreSQL
-   createdb agris_db
-   
-   # Generate initial migration
-   alembic revision --autogenerate -m "init tables"
-   
-   # Apply migrations
    alembic upgrade head
    ```
    
    **Option 2: Using Setup Script (Development Only)**
    ```bash
-   # Create database in PostgreSQL
-   createdb agris_db
-   
-   # Run setup script (only when needed, not on every server start)
    python setup_db.py
    ```
    
-   ⚠️ **Important**: Database tables are NOT created automatically on server start. You must run migrations or the setup script manually.
+   ⚠️ **Important**: Tables are NOT created automatically on server start. Run migrations or the setup script as part of deployment.
 
 6. **Run the server**
    ```bash

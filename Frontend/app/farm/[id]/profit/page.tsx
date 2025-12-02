@@ -6,11 +6,14 @@ import { Navigation } from "@/components/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ArrowLeft, Download } from "lucide-react"
+import { apiClient } from "@/lib/api-client"
+import { useAuthGuard } from "@/hooks/use-auth-guard"
 
 export default function ProfitSummaryPage() {
   const router = useRouter()
   const params = useParams()
-  const farmId = params.id
+  useAuthGuard()
+  const farmId = Array.isArray(params?.id) ? params?.id[0] : (params?.id as string | undefined)
 
   const [profitData, setProfitData] = useState({
     totalExpenses: 0,
@@ -23,52 +26,27 @@ export default function ProfitSummaryPage() {
   useEffect(() => {
     const fetchProfitData = async () => {
       try {
-        const expensesRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/farms/${farmId}/expenses`)
-        const yieldRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/farms/${farmId}/yield`)
-
-        const expensesData = await expensesRes.json()
-        const yieldData = await yieldRes.json()
-
-        const totalExpenses = expensesData.reduce((sum: number, exp: any) => sum + exp.amount, 0)
-        const totalProfit = yieldData.reduce((sum: number, y: any) => sum + y.soldPrice, 0)
-        const netProfit = totalProfit - totalExpenses
-        const profitMargin = totalProfit > 0 ? (netProfit / totalProfit) * 100 : 0
-
-        // Group expenses by category
-        const expensesByCategory = expensesData.reduce(
-          (acc: any, exp: any) => {
-            const existing = acc.find((e: any) => e.category === exp.category)
-            if (existing) {
-              existing.amount += exp.amount
-            } else {
-              acc.push({ category: exp.category, amount: exp.amount })
-            }
-            return acc
-          },
-          [] as Array<{ category: string; amount: number }>,
-        )
+        if (!farmId) return
+        const [summary, expensesByCategory] = await Promise.all([
+          apiClient.get<{ totalExpenses: number; totalYield: number; netProfit: number; profitMargin: number }>(`/farms/${farmId}/summary`),
+          apiClient.get<Array<{ category: string; amount: number }>>(`/farms/${farmId}/expenses/by-category`),
+        ])
 
         setProfitData({
-          totalExpenses,
-          totalProfit,
-          netProfit,
-          profitMargin,
-          expenses: expensesByCategory,
+          totalExpenses: summary.totalExpenses ?? 0,
+          totalProfit: summary.totalYield ?? 0,
+          netProfit: summary.netProfit ?? 0,
+          profitMargin: summary.profitMargin ?? 0,
+          expenses: expensesByCategory ?? [],
         })
       } catch (error) {
         console.error("Error fetching profit data:", error)
-        // Use mock data if API fails
         setProfitData({
-          totalExpenses: 5000,
-          totalProfit: 8000,
-          netProfit: 3000,
-          profitMargin: 37.5,
-          expenses: [
-            { category: "Worker", amount: 1500 },
-            { category: "Fertilizer", amount: 2000 },
-            { category: "Shop", amount: 1200 },
-            { category: "Transport", amount: 800 },
-          ],
+          totalExpenses: 0,
+          totalProfit: 0,
+          netProfit: 0,
+          profitMargin: 0,
+          expenses: [],
         })
       }
     }
@@ -78,20 +56,18 @@ export default function ProfitSummaryPage() {
 
   const downloadPDF = async () => {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/farms/${farmId}/profit/report/pdf`, {
-        method: "GET",
-      })
-      if (response.ok) {
-        const blob = await response.blob()
-        const url = window.URL.createObjectURL(blob)
-        const a = document.createElement("a")
-        a.href = url
-        a.download = `profit-summary-${farmId}.pdf`
-        a.click()
-        window.URL.revokeObjectURL(url)
-      }
+      const blob = await apiClient.getBlob(`/farms/${farmId}/profit/report/pdf`)
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement("a")
+      link.href = url
+      link.download = `profit-summary-${farmId}.pdf`
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      window.URL.revokeObjectURL(url)
     } catch (error) {
       console.error("Error downloading PDF:", error)
+      alert("Unable to download profit report right now.")
     }
   }
 

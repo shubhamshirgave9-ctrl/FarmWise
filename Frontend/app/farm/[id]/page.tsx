@@ -7,21 +7,24 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ArrowLeft, DollarSign, Leaf, TrendingUp as Trending } from "lucide-react"
 import { apiClient } from "@/lib/api-client"
+import { useAuthGuard } from "@/hooks/use-auth-guard"
 
 interface FarmData {
-  id: string | number
+  id: string
   name: string
-  type: string
+  type?: string | null
   size: string
-  totalExpenses?: number
-  totalYield?: number
-  netProfit?: number
+  totalExpenses: number
+  totalYield: number
+  netProfit: number
+  profitMargin: number
 }
 
 export default function FarmDetailsPage() {
   const router = useRouter()
   const params = useParams()
-  const farmId = params.id
+  useAuthGuard()
+  const farmId = Array.isArray(params?.id) ? params?.id[0] : (params?.id as string | undefined)
 
   const [farmData, setFarmData] = useState<FarmData | null>(null)
   const [loading, setLoading] = useState(true)
@@ -30,7 +33,8 @@ export default function FarmDetailsPage() {
   useEffect(() => {
     const fetchFarmData = async () => {
       try {
-        const data = await apiClient.get(`/farms/${farmId}`)
+        if (!farmId) return
+        const data = await apiClient.get<FarmData>(`/farms/${farmId}`)
         setFarmData(data)
         setError(null)
       } catch (err) {
@@ -89,7 +93,7 @@ export default function FarmDetailsPage() {
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2">{farmData.name}</h1>
           <p className="text-muted-foreground">
-            {farmData.type} • {farmData.size}
+            {(farmData.type ?? "General farm")} • {farmData.size}
           </p>
         </div>
 
@@ -101,7 +105,7 @@ export default function FarmDetailsPage() {
             <CardContent>
               <div className="flex items-center gap-2">
                 <DollarSign className="w-5 h-5 text-red-600" />
-                <span className="text-2xl font-bold">${(farmData.totalExpenses || 0).toFixed(2)}</span>
+                <span className="text-2xl font-bold">${farmData.totalExpenses.toFixed(2)}</span>
               </div>
             </CardContent>
           </Card>
@@ -113,7 +117,7 @@ export default function FarmDetailsPage() {
             <CardContent>
               <div className="flex items-center gap-2">
                 <Leaf className="w-5 h-5 text-green-600" />
-                <span className="text-2xl font-bold">${(farmData.totalYield || 0).toFixed(2)}</span>
+                <span className="text-2xl font-bold">${farmData.totalYield.toFixed(2)}</span>
               </div>
             </CardContent>
           </Card>
@@ -125,7 +129,7 @@ export default function FarmDetailsPage() {
             <CardContent>
               <div className="flex items-center gap-2">
                 <Trending className="w-5 h-5 text-blue-600" />
-                <span className="text-2xl font-bold">${(farmData.netProfit || 0).toFixed(2)}</span>
+                <span className="text-2xl font-bold">${farmData.netProfit.toFixed(2)}</span>
               </div>
             </CardContent>
           </Card>

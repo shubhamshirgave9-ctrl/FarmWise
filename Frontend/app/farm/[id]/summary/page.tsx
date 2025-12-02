@@ -7,10 +7,12 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { ArrowLeft, Download } from "lucide-react"
 import { apiClient } from "@/lib/api-client"
+import { useAuthGuard } from "@/hooks/use-auth-guard"
 
 interface FarmSummary {
+  id: string
   name: string
-  type: string
+  type?: string | null
   size: string
   totalExpenses: number
   totalYield: number
@@ -21,7 +23,8 @@ interface FarmSummary {
 export default function FarmSummaryPage() {
   const router = useRouter()
   const params = useParams()
-  const farmId = params.id
+  useAuthGuard()
+  const farmId = Array.isArray(params?.id) ? params?.id[0] : (params?.id as string | undefined)
 
   const [farmSummary, setFarmSummary] = useState<FarmSummary | null>(null)
   const [loading, setLoading] = useState(true)
@@ -30,8 +33,9 @@ export default function FarmSummaryPage() {
   useEffect(() => {
     const fetchSummary = async () => {
       try {
-        const data = await apiClient.get(`/farms/${farmId}/summary`)
-        setFarmSummary(data)
+        if (!farmId) return
+        const summary = await apiClient.get<FarmSummary>(`/farms/${farmId}/summary`)
+        setFarmSummary(summary)
         setError(null)
       } catch (err) {
         console.error("[v0] Error fetching summary:", err)
@@ -48,20 +52,19 @@ export default function FarmSummaryPage() {
 
   const handleDownloadPDF = async () => {
     try {
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/farms/${farmId}/summary/pdf`,
-      )
-      if (response.ok) {
-        const blob = await response.blob()
-        const url = window.URL.createObjectURL(blob)
-        const a = document.createElement("a")
-        a.href = url
-        a.download = `farm-summary-${farmId}.pdf`
-        a.click()
-        window.URL.revokeObjectURL(url)
-      }
+      if (!farmId) return
+      const blob = await apiClient.getBlob(`/farms/${farmId}/summary/pdf`)
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement("a")
+      link.href = url
+      link.download = `farm-summary-${farmId}.pdf`
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      window.URL.revokeObjectURL(url)
     } catch (err) {
-      console.error("[v0] Error downloading PDF:", err)
+      console.error("Error downloading PDF:", err)
+      alert("Unable to download summary PDF at the moment.")
     }
   }
 
@@ -97,7 +100,7 @@ export default function FarmSummaryPage() {
 
   const details = [
     { label: "Farm Size", value: farmSummary.size },
-    { label: "Farm Type", value: farmSummary.type },
+    { label: "Farm Type", value: farmSummary.type ?? "General farm" },
     { label: "Total Expenses", value: `$${farmSummary.totalExpenses.toFixed(2)}` },
     { label: "Total Yield Revenue", value: `$${farmSummary.totalYield.toFixed(2)}` },
     { label: "Net Profit", value: `$${farmSummary.netProfit.toFixed(2)}` },

@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ArrowLeft, FileDown } from "lucide-react"
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from "recharts"
 import { apiClient } from "@/lib/api-client"
+import { useAuthGuard } from "@/hooks/use-auth-guard"
 
 interface ExpenseData {
   category: string
@@ -22,7 +23,8 @@ interface TimeSeriesData {
 export default function ExpenseGraphPage() {
   const router = useRouter()
   const params = useParams()
-  const farmId = params.id
+  useAuthGuard()
+  const farmId = Array.isArray(params?.id) ? params?.id[0] : (params?.id as string | undefined)
 
   const [expenseData, setExpenseData] = useState<ExpenseData[]>([])
   const [timeSeriesData, setTimeSeriesData] = useState<TimeSeriesData[]>([])
@@ -32,8 +34,22 @@ export default function ExpenseGraphPage() {
   useEffect(() => {
     const fetchExpenseGraphs = async () => {
       try {
-        const categoryData = await apiClient.get(`/farms/${farmId}/expenses/by-category`)
-        const trendData = await apiClient.get(`/farms/${farmId}/expenses/trend`)
+        if (!farmId) return
+        const [categoryResponse, trendResponse] = await Promise.all([
+          apiClient.get<Array<{ category: string; amount: number }>>(`/farms/${farmId}/expenses/by-category`),
+          apiClient.get<Array<{ month: string; expenses: number }>>(`/farms/${farmId}/expenses/trend`),
+        ])
+
+        const categoryData: ExpenseData[] = (categoryResponse ?? []).map((entry) => ({
+          category: entry.category,
+          amount: entry.amount,
+        }))
+
+        const trendData: TimeSeriesData[] = (trendResponse ?? []).map((item) => ({
+          month: item.month,
+          expenses: item.expenses,
+        }))
+
         setExpenseData(categoryData)
         setTimeSeriesData(trendData)
         setError(null)
@@ -52,20 +68,18 @@ export default function ExpenseGraphPage() {
 
   const handleGeneratePDF = async () => {
     try {
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/farms/${farmId}/expenses/graph/pdf`,
-      )
-      if (response.ok) {
-        const blob = await response.blob()
-        const url = window.URL.createObjectURL(blob)
-        const a = document.createElement("a")
-        a.href = url
-        a.download = `expense-graph-${farmId}.pdf`
-        a.click()
-        window.URL.revokeObjectURL(url)
-      }
+      const blob = await apiClient.getBlob(`/farms/${farmId}/expenses/graph/pdf`)
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement("a")
+      link.href = url
+      link.download = `expense-graph-${farmId}.pdf`
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      window.URL.revokeObjectURL(url)
     } catch (err) {
       console.error("[v0] Error generating PDF:", err)
+      alert("Unable to generate PDF at the moment.")
     }
   }
 

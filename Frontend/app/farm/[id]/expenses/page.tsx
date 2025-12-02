@@ -4,6 +4,7 @@ import { Navigation } from "@/components/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { ArrowLeft, BarChart3 } from "lucide-react"
+import { useAuthGuard } from "@/hooks/use-auth-guard"
 
 const EXPENSE_CATEGORIES = [
   { id: "worker", name: "Worker", icon: "👷", color: "bg-blue-100 text-blue-700" },
@@ -15,7 +16,8 @@ const EXPENSE_CATEGORIES = [
 export default function ExpensesCategoryPage() {
   const router = useRouter()
   const params = useParams()
-  const farmId = params.id
+  useAuthGuard()
+  const farmId = Array.isArray(params?.id) ? params?.id[0] : (params?.id as string | undefined)
 
   return (
     <div className="min-h-screen bg-background">
