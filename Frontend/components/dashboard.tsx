@@ -15,15 +15,15 @@ import {
   Pie,
   Cell,
 } from "recharts"
-import { TrendingUp, DollarSign, Leaf, TrendingDown } from "lucide-react"
+import { TrendingUp, DollarSign, Leaf } from "lucide-react"
 
 export function Dashboard() {
   const [expenses, setExpenses] = useState<any[]>([])
   const [yields, setYields] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
-  const [animateCards, setAnimateCards] = useState(false)
 
   useEffect(() => {
+    // Placeholder API call - replace with actual backend
     const mockExpenses = [
       { date: "2024-01-01", amount: 150, category: "Fertilizer", crop: "Corn" },
       { date: "2024-01-05", amount: 75, category: "Seeds", crop: "Wheat" },
@@ -38,16 +38,14 @@ export function Dashboard() {
 
     setExpenses(mockExpenses)
     setYields(mockYields)
-    setTimeout(() => {
-      setAnimateCards(true)
-      setLoading(false)
-    }, 100)
+    setLoading(false)
   }, [])
 
   const totalExpenses = expenses.reduce((sum, exp) => sum + exp.amount, 0)
   const totalRevenue = yields.reduce((sum, y) => sum + y.revenue, 0)
   const netProfit = totalRevenue - totalExpenses
 
+  // Aggregate expenses by crop
   const expensesByCategory = expenses.reduce((acc: any, exp: any) => {
     const existing = acc.find((e: any) => e.category === exp.category)
     if (existing) {
@@ -58,144 +56,110 @@ export function Dashboard() {
     return acc
   }, [])
 
+  // Data for chart
   const chartData = [
     { name: "Corn", expenses: 350, revenue: 5000 },
     { name: "Wheat", expenses: 175, revenue: 2400 },
   ]
 
-  const colors = ["#52a76e", "#f59e0b", "#3b82f6", "#8b5cf6"]
+  const colors = ["#6b9e3f", "#d97706", "#3b82f6", "#8b5cf6"]
 
   if (loading) {
-    return (
-      <div className="text-center py-8">
-        <div className="inline-block animate-shimmer text-lg font-medium">Loading dashboard...</div>
-      </div>
-    )
+    return <div className="text-center py-8">Loading dashboard...</div>
   }
-
-  const metricCards = [
-    {
-      title: "Total Expenses",
-      icon: DollarSign,
-      color: "destructive",
-      bgColor: "from-destructive/10 to-destructive/5",
-      value: `$${totalExpenses}`,
-      description: "All recorded expenses",
-    },
-    {
-      title: "Total Revenue",
-      icon: Leaf,
-      color: "primary",
-      bgColor: "from-primary/10 to-primary/5",
-      value: `$${totalRevenue}`,
-      description: "Yield sales total",
-    },
-    {
-      title: "Net Profit",
-      icon: TrendingUp,
-      color: netProfit >= 0 ? "primary" : "destructive",
-      bgColor: netProfit >= 0 ? "from-primary/10 to-primary/5" : "from-destructive/10 to-destructive/5",
-      value: `$${netProfit}`,
-      description: `${((netProfit / totalRevenue) * 100 || 0).toFixed(1)}% margin`,
-    },
-    {
-      title: "Active Crops",
-      icon: Leaf,
-      color: "chart-1",
-      bgColor: "from-chart-1/10 to-chart-1/5",
-      value: yields.length.toString(),
-      description: "Tracked varieties",
-    },
-  ]
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {metricCards.map((card, idx) => (
-          <Card
-            key={idx}
-            className={`bg-gradient-to-br ${card.bgColor} border-primary/20 transition-smooth cursor-pointer group hover:shadow-xl hover:scale-105 ${
-              animateCards ? "animate-fade-in-up" : "opacity-0"
-            }`}
-            style={{ animationDelay: `${idx * 100}ms` }}
-          >
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-semibold text-foreground">{card.title}</CardTitle>
-              <div className={`bg-${card.color}/10 p-2 rounded-lg transition-smooth group-hover:scale-110`}>
-                <card.icon className={`h-4 w-4 text-${card.color}`} />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className={`text-3xl font-bold text-${card.color} transition-smooth`}>{card.value}</div>
-              <p className="text-xs text-muted-foreground mt-1">{card.description}</p>
-            </CardContent>
-          </Card>
-        ))}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        {/* Summary Cards */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Expenses</CardTitle>
+            <DollarSign className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-destructive">${totalExpenses}</div>
+            <p className="text-xs text-muted-foreground">All recorded expenses</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
+            <Leaf className="h-4 w-4 text-primary" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-primary">${totalRevenue}</div>
+            <p className="text-xs text-muted-foreground">Yield sales total</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Net Profit</CardTitle>
+            <TrendingUp className="h-4 w-4 text-chart-1" />
+          </CardHeader>
+          <CardContent>
+            <div className={`text-2xl font-bold ${netProfit >= 0 ? "text-primary" : "text-destructive"}`}>
+              ${netProfit}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {((netProfit / totalRevenue) * 100 || 0).toFixed(1)}% margin
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Active Crops</CardTitle>
+            <Sprout className="h-4 w-4 text-primary" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{yields.length}</div>
+            <p className="text-xs text-muted-foreground">Tracked varieties</p>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card
-          className={`shadow-md border-border/50 transition-smooth ${animateCards ? "animate-slide-in-right" : "opacity-0"}`}
-        >
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <Card>
           <CardHeader>
-            <CardTitle className="text-lg font-semibold">Profit vs Expenses</CardTitle>
-            <CardDescription>Revenue and expenses comparison by crop</CardDescription>
+            <CardTitle>Profit vs Expenses by Crop</CardTitle>
+            <CardDescription>Revenue and expenses comparison</CardDescription>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={chartData} margin={{ top: 20, right: 30, left: 0, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" opacity={0.3} />
-                <XAxis dataKey="name" stroke="var(--color-muted-foreground)" style={{ fontSize: "12px" }} />
-                <YAxis stroke="var(--color-muted-foreground)" style={{ fontSize: "12px" }} />
+              <BarChart data={chartData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
+                <XAxis dataKey="name" stroke="var(--color-muted-foreground)" />
+                <YAxis stroke="var(--color-muted-foreground)" />
                 <Tooltip
-                  contentStyle={{
-                    backgroundColor: "var(--color-card)",
-                    border: "1px solid var(--color-border)",
-                    borderRadius: "8px",
-                    transition: "all 0.2s ease-out",
-                  }}
-                  cursor={{ fill: "rgba(0,0,0,0.05)" }}
+                  contentStyle={{ backgroundColor: "var(--color-card)", border: "1px solid var(--color-border)" }}
                 />
                 <Legend />
-                <Bar dataKey="expenses" fill="var(--color-destructive)" radius={[8, 8, 0, 0]} />
-                <Bar dataKey="revenue" fill="var(--color-primary)" radius={[8, 8, 0, 0]} />
+                <Bar dataKey="expenses" fill="var(--color-destructive)" />
+                <Bar dataKey="revenue" fill="var(--color-primary)" />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
         </Card>
 
-        <Card
-          className={`shadow-md border-border/50 transition-smooth ${animateCards ? "animate-slide-in-right" : "opacity-0"}`}
-          style={{ animationDelay: "100ms" }}
-        >
+        <Card>
           <CardHeader>
-            <CardTitle className="text-lg font-semibold">Expense Distribution</CardTitle>
-            <CardDescription>Breakdown by expense category</CardDescription>
+            <CardTitle>Expense Distribution</CardTitle>
+            <CardDescription>By expense category</CardDescription>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
-                <Pie
-                  data={expensesByCategory}
-                  dataKey="value"
-                  nameKey="category"
-                  cx="50%"
-                  cy="50%"
-                  outerRadius={80}
-                  innerRadius={40}
-                  paddingAngle={2}
-                >
+                <Pie data={expensesByCategory} dataKey="value" nameKey="category" cx="50%" cy="50%" outerRadius={80}>
                   {expensesByCategory.map((entry: any, index: number) => (
                     <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
                   ))}
                 </Pie>
                 <Tooltip
-                  contentStyle={{
-                    backgroundColor: "var(--color-card)",
-                    border: "1px solid var(--color-border)",
-                    borderRadius: "8px",
-                  }}
+                  contentStyle={{ backgroundColor: "var(--color-card)", border: "1px solid var(--color-border)" }}
                 />
               </PieChart>
             </ResponsiveContainer>
@@ -204,34 +168,22 @@ export function Dashboard() {
       </div>
 
       {/* Recent Expenses */}
-      <Card
-        className={`shadow-md border-border/50 transition-smooth ${animateCards ? "animate-fade-in-up" : "opacity-0"}`}
-        style={{ animationDelay: "200ms" }}
-      >
+      <Card>
         <CardHeader>
-          <CardTitle className="text-lg font-semibold">Recent Expenses</CardTitle>
+          <CardTitle>Recent Expenses</CardTitle>
           <CardDescription>Last 5 expense entries</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-2">
+          <div className="space-y-3">
             {expenses.slice(0, 5).map((exp, idx) => (
-              <div
-                key={idx}
-                className={`flex items-center justify-between p-4 border border-border/30 rounded-lg transition-smooth hover:bg-primary/5 hover:border-primary/30 hover:shadow-md ${
-                  animateCards ? "animate-fade-in-up" : "opacity-0"
-                }`}
-                style={{ animationDelay: `${300 + idx * 50}ms` }}
-              >
-                <div className="flex-1">
+              <div key={idx} className="flex items-center justify-between p-3 border border-border rounded-lg">
+                <div>
                   <p className="font-medium text-sm">
                     {exp.category} - {exp.crop}
                   </p>
                   <p className="text-xs text-muted-foreground">{exp.date}</p>
                 </div>
-                <div className="flex items-center gap-2">
-                  <TrendingDown className="w-4 h-4 text-destructive opacity-60 transition-smooth group-hover:scale-125" />
-                  <p className="font-semibold text-destructive text-sm">${exp.amount}</p>
-                </div>
+                <p className="font-semibold text-destructive">${exp.amount}</p>
               </div>
             ))}
           </div>
@@ -240,3 +192,6 @@ export function Dashboard() {
     </div>
   )
 }
+
+// Add missing import
+import { Sprout } from "lucide-react"
