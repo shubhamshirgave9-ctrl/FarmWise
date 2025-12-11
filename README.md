@@ -152,15 +152,3 @@ backend/
 └── README.md
 ```
 
-## 🧪 Testing
-
-For development without Twilio, the OTP will be printed to console. Update `.env` with your Twilio credentials for production.
-
-## 📝 License
-
-MIT License
-
-
-=======
-# FarmWise
->>>>>>> e6da717669f69326d19c3b50f03ac17f6c953837
