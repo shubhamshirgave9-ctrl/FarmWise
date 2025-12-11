@@ -4,13 +4,18 @@ from sqlalchemy.exc import IntegrityError
 from app.database import get_db
 from app.models.user import User
 from app.schemas.auth_schemas import (
-    RegisterRequest, RegisterResponse,
-    RequestOTPRequest, RequestOTPResponse,
-    VerifyOTPRequest, VerifyOTPResponse,
-    UserResponse
+    RegisterRequest,
+    RegisterResponse,
+    RequestOTPRequest,
+    RequestOTPResponse,
+    VerifyOTPRequest,
+    VerifyOTPResponse,
+    UserResponse,
+    RefreshTokenRequest,
+    RefreshTokenResponse,
 )
 from app.utils.otp_handler import generate_otp, send_otp_via_twilio, store_otp, verify_otp
-from app.utils.jwt_handler import create_access_token, create_refresh_token
+from app.utils.jwt_handler import create_access_token, create_refresh_token, verify_token
 import uuid
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
@@ -113,5 +118,42 @@ async def verify_otp_endpoint(request: VerifyOTPRequest, db: Session = Depends(g
         user=UserResponse.model_validate(user),
         access_token=access_token,
         refresh_token=refresh_token
+    )
+
+
+@router.post("/refresh", response_model=RefreshTokenResponse)
+async def refresh_tokens(
+    request: RefreshTokenRequest,
+    db: Session = Depends(get_db),
+):
+    """Refresh access token using refresh token"""
+    payload = verify_token(request.refresh_token, token_type="refresh")
+    if not payload:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid refresh token"
+        )
+
+    user_id = payload.get("sub")
+    if not user_id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token payload"
+        )
+
+    user = db.query(User).filter(User.id == user_id, User.is_active == True).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User not found or inactive"
+        )
+
+    token_data = {"sub": str(user.id), "phone": user.phone}
+    new_access_token = create_access_token(data=token_data)
+    new_refresh_token = create_refresh_token(data=token_data)
+
+    return RefreshTokenResponse(
+        access_token=new_access_token,
+        refresh_token=new_refresh_token
     )
 
